@@ -1,0 +1,199 @@
+require('dotenv').config();
+const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const AWS = require('aws-sdk');
+const cors = require('cors');
+const fetch = require('node-fetch');
+
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  sessionToken: process.env.AWS_SESSION_TOKEN,
+  region: process.env.AWS_REGION
+});
+
+const dynamo = new AWS.DynamoDB.DocumentClient();
+const app = express();
+
+const corsOptions = {
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'clave-secreta',
+  resave: false,
+  saveUninitialized: false,
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// 📌 Nuevo: Devolver la URL de autenticación de Google
+app.get('/auth/google', (req, res) => {
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.CLIENT_ID}&redirect_uri=${process.env.FRONTEND_URL}/auth/callback&response_type=code&scope=profile email`;
+  res.json({ authUrl });
+});
+
+// 📌 Nuevo: Recibir el código y devolver datos del usuario sin sesión
+app.post('/auth/google/token', async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Código no recibido' });
+
+  try {
+    // Intercambiar código por token de acceso
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
+        redirect_uri: `${process.env.FRONTEND_URL}/auth/callback`,
+        grant_type: 'authorization_code',
+        code
+      })
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) return res.status(400).json({ error: 'Error obteniendo token' });
+
+    // Obtener datos del usuario con el token
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` }
+    });
+    const userData = await userResponse.json();
+
+    // Buscar usuario en DynamoDB
+    const email = userData.email;
+    const data = await dynamo.get({ TableName: process.env.TABLE_NAME_1, Key: { email } }).promise();
+    const user = data.Item;
+
+    if (!user) return res.status(401).json({ error: 'Usuario no registrado en la tabla Users' });
+
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/userinfo', (req, res) => {
+  res.status(401).json({ error: 'No autenticado' });
+});
+
+// 📌 Ubicación del auditorio (ajusta según sea necesario)
+//const AUDITORIUM_LAT = -12.135483926049508;
+//const AUDITORIUM_LNG = -77.02247348966193;
+
+// mis coordenadas
+const AUDITORIUM_LAT = -12.0619008;
+const AUDITORIUM_LNG = -76.9851392;
+
+const RADIUS_METERS = 10; // Distancia máxima permitida
+
+// Función para calcular distancia con la fórmula de Haversine
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Radio de la Tierra en metros
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distancia en metros
+}
+
+app.post('/api/attendance', async (req, res) => {
+  const { email, class_number, timestamp, latitude, longitude } = req.body;
+
+  if (!email || !class_number || !timestamp || latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ error: "Faltan datos requeridos" });
+  }
+
+  // 📌 Verificar si el usuario está dentro del rango permitido
+  const distance = getDistance(latitude, longitude, AUDITORIUM_LAT, AUDITORIUM_LNG);
+
+  if (distance > RADIUS_METERS) {
+    return res.status(403).json({ error: "Acércate más al auditorio para registrar tu asistencia" });
+  }
+
+  // 📌 Guardar asistencia en DynamoDB
+  const params = {
+    TableName: process.env.TABLE_NAME_2,
+    Item: {
+      email,
+      class_number,
+      timestamp,
+      latitude,
+      longitude
+    }
+  };
+
+  try {
+    await dynamo.put(params).promise();
+    res.json({ message: "Asistencia registrada exitosamente" });
+  } catch (err) {
+    console.error("Error registrando asistencia:", err);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+
+app.get('/api/attendance/filter', async (req, res) => {
+  try {
+      const classNumber = req.query.class_number ? Number(req.query.class_number) : null;
+      const section = req.query.section ? Number(req.query.section) : null;
+
+      // Obtener asistencia
+      const attendanceData = await dynamo.scan({ TableName: process.env.TABLE_NAME_2 }).promise();
+
+      // Obtener usuarios
+      const usersData = await dynamo.scan({ TableName: process.env.TABLE_NAME_1 }).promise();
+
+      // Convertir usuarios a un mapa { email: { name, section } }
+      const usersMap = {};
+      usersData.Items.forEach(user => {
+          usersMap[user.email] = { 
+              name: user.name || "Desconocido", 
+              section: user.section ? Number(user.section) : 0 
+          };
+      });
+
+      // Filtrar y unir datos
+      let filteredData = attendanceData.Items.map(att => ({
+          ...att,
+          name: usersMap[att.email]?.name || "Desconocido",
+          section: usersMap[att.email]?.section || 0
+      }));
+
+      if (classNumber !== null) {
+          filteredData = filteredData.filter(att => Number(att.class_number) === classNumber);
+      }
+      if (section !== null) {
+          filteredData = filteredData.filter(att => Number(att.section) === section);
+      }
+
+      // Ordenar por nombre
+      filteredData.sort((a, b) => a.name.localeCompare(b.name));
+
+      res.json(filteredData);
+  } catch (err) {
+      console.error("❌ Error obteniendo datos:", err);
+      res.status(500).json({ error: "Error interno del servidor" });
+  }
+});
+
+
+app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`));
+
+
