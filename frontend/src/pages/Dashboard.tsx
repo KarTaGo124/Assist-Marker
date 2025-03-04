@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { AttendanceRecord } from "../interfaces/interfaces";
 
 const API_URL = "http://localhost:3000";
@@ -140,6 +140,8 @@ const Dashboard = () => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 	const [focusedInput, setFocusedInput] = useState<string | null>(null);
+	const [isAttendanceActive, setIsAttendanceActive] =
+		useState<boolean>(false);
 
 	const fetchAttendance = async () => {
 		setLoading(true);
@@ -169,11 +171,57 @@ const Dashboard = () => {
 		}
 	};
 
+	// Alternar estado de asistencia
+	const toggleAttendance = async () => {
+		try {
+			const response = await fetch(`${API_URL}/api/attendance/state`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ active: !isAttendanceActive }),
+			});
+
+			if (!response.ok) {
+				throw new Error("Error al cambiar el estado de asistencia");
+			}
+
+			const data = await response.json();
+
+			setIsAttendanceActive(data.active);
+		} catch (err) {
+			console.error("Error al actualizar asistencia:", err);
+		}
+	};
+
+	// Obtener el estado inicial de la asistencia al montar el componente
+	useEffect(() => {
+		const fetchAttendanceState = async () => {
+			try {
+				const response = await fetch(`${API_URL}/api/attendance/state`);
+				if (!response.ok) {
+					throw new Error("Error al obtener estado de asistencia");
+				}
+
+				const data = await response.json();
+				setIsAttendanceActive(data.active);
+			} catch (err) {
+				console.error("Error obteniendo estado de asistencia:", err);
+			}
+		};
+
+		fetchAttendanceState();
+	}, []);
+
 	return (
 		<div style={styles.container}>
 			<header style={styles.header}>
 				<h1 style={styles.headerTitle}>Panel de Administración</h1>
 			</header>
+
+			<button onClick={toggleAttendance}>
+				{isAttendanceActive
+					? "Desactivar Asistencia"
+					: "Activar Asistencia"}
+			</button>
 
 			<div style={styles.filterCard}>
 				<h2 style={styles.filterTitle}>Filtrar Asistencias</h2>

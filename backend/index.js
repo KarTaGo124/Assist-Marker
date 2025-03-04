@@ -18,7 +18,7 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 const app = express();
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: [process.env.FRONTEND_URL],
   credentials: true
 };
 app.use(cors(corsOptions));
@@ -36,13 +36,13 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 📌 Nuevo: Devolver la URL de autenticación de Google
+// 📌 Devolver la URL de autenticación de Google
 app.get('/auth/google', (req, res) => {
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.CLIENT_ID}&redirect_uri=${process.env.FRONTEND_URL}/auth/callback&response_type=code&scope=profile email`;
   res.json({ authUrl });
 });
 
-// 📌 Nuevo: Recibir el código y devolver datos del usuario sin sesión
+// 📌 Recibir el código y devolver datos del usuario sin sesión
 app.post('/auth/google/token', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Código no recibido' });
@@ -87,6 +87,42 @@ app.get('/api/userinfo', (req, res) => {
   res.status(401).json({ error: 'No autenticado' });
 });
 
+
+// 📌 Obtener el estado de la asistencia desde DynamoDB
+app.get('/api/attendance/state', async (req, res) => {
+  try {
+    const data = await dynamo.get({ TableName: process.env.TABLE_NAME_3, Key: { id: 'attendance_state' } }).promise();
+    res.json({ active: data.Item ? data.Item.active : false });
+  } catch (err) {
+    res.status(500).json({ error: 'Error obteniendo estado de asistencia' });
+  }
+});
+
+// 📌 Activar/desactivar asistencia en DynamoDB
+app.post('/api/attendance/state', async (req, res) => {
+  const { active } = req.body;
+  if (typeof active !== 'boolean') {
+    return res.status(400).json({ error: 'Estado inválido' });
+  }
+
+  try {
+    // Guardar en Dynamo
+    await dynamo.put({
+      TableName: process.env.TABLE_NAME_3,
+      Item: { id: 'attendance_state', active },
+    }).promise();
+
+    // Devolver también el valor actualizado de `active`
+    res.json({
+      active,
+      message: `Asistencia ${active ? 'activada' : 'desactivada'}`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Error actualizando estado de asistencia' });
+  }
+});
+
+
 // 📌 Ubicación del auditorio (ajusta según sea necesario)
 //const AUDITORIUM_LAT = -12.135483926049508;
 //const AUDITORIUM_LNG = -77.02247348966193;
@@ -113,13 +149,28 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c; // Distancia en metros
 }
 
+// 📌 Verificar asistencia con token
 app.post('/api/attendance', async (req, res) => {
+  try {
+    const attendanceState = await dynamo.get({ TableName: process.env.TABLE_NAME_3, Key: { id: 'attendance_state' } }).promise();
+    if (!attendanceState.Item || !attendanceState.Item.active) {
+      return res.status(403).json({ error: 'La asistencia no está activa' });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'Error verificando el estado de asistencia' });
+  }
+  
   const { email, class_number, timestamp, latitude, longitude } = req.body;
-
   if (!email || !class_number || !timestamp || latitude === undefined || longitude === undefined) {
     return res.status(400).json({ error: "Faltan datos requeridos" });
   }
-
+  
+  // 📌 Verificar si el usuario está en la base de datos
+  const userCheck = await dynamo.get({ TableName: process.env.TABLE_NAME_1, Key: { email } }).promise();
+  if (!userCheck.Item) {
+    return res.status(401).json({ error: 'Usuario no registrado' });
+  }
+  
   // 📌 Verificar si el usuario está dentro del rango permitido
   const distance = getDistance(latitude, longitude, AUDITORIUM_LAT, AUDITORIUM_LNG);
 
