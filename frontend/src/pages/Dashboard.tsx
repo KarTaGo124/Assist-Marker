@@ -10,6 +10,8 @@ const styles = {
 		minHeight: "100vh",
 		background: "linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%)",
 		padding: "20px",
+		maxWidth: "1200px",
+		margin: "0 auto",
 	},
 	header: {
 		backgroundColor: "#6d28d9",
@@ -41,10 +43,25 @@ const styles = {
 		textAlign: "center" as const,
 	},
 	formGroup: {
-		display: "grid",
-		gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+		display: "flex",
+		flexDirection: "column" as const,
 		gap: "16px",
 		marginBottom: "20px",
+		width: "100%", // Cambiar a width 100%
+	},
+	inputsContainer: {
+		display: "flex",
+		flexDirection: "column" as const,
+		gap: "16px",
+	},
+	inputRow: {
+		display: "flex",
+		justifyContent: "space-between", // Espacio entre elementos
+		alignItems: "flex-end",
+		width: "100%", // Asegurar ancho completo
+	},
+	inputWrapper: {
+		width: "300px", // Ancho fijo en lugar de maxWidth
 	},
 	label: {
 		display: "block",
@@ -55,9 +72,9 @@ const styles = {
 	},
 	input: {
 		width: "100%",
-		padding: "8px 12px",
+		padding: "10px 12px",
 		borderRadius: "6px",
-		border: "1px solid #d1d5db",
+		border: "1px solid #6d28d9",
 		fontSize: "14px",
 		transition: "all 0.2s ease",
 		outline: "none",
@@ -76,22 +93,30 @@ const styles = {
 		fontWeight: "500",
 		cursor: "pointer",
 		transition: "all 0.2s ease",
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		width: "100%",
+		height: "42px",
+		width: "120px",
+		marginTop: "24px",
 	},
 	buttonHover: {
 		backgroundColor: "#d97706",
 		transform: "translateY(-1px)",
 	},
-	table: {
+	buttonContainer: {
+		display: "flex",
+		justifyContent: "flex-end",
 		width: "100%",
+	},
+	tableContainer: {
 		backgroundColor: "white",
 		borderRadius: "12px",
 		overflow: "hidden",
 		boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-		border: "1px solid #e5e7eb",
+		border: "1px solid #6d28d9",
+	},
+	table: {
+		width: "100%",
+		borderCollapse: "collapse" as const,
+		backgroundColor: "white",
 	},
 	tableHeader: {
 		backgroundColor: "#6d28d9",
@@ -100,12 +125,14 @@ const styles = {
 		fontWeight: "500",
 		padding: "12px 16px",
 		textAlign: "left" as const,
+		borderBottom: "1px solid #6d28d9",
 	},
 	tableCell: {
 		padding: "12px 16px",
 		fontSize: "14px",
 		color: "#374151",
-		borderBottom: "1px solid #e5e7eb",
+		borderBottom: "1px solid #6d28d9",
+		backgroundColor: "white",
 	},
 	tableRow: {
 		transition: "background-color 0.2s ease",
@@ -126,6 +153,28 @@ const styles = {
 		textAlign: "center" as const,
 		padding: "48px 0",
 		color: "#6b7280",
+		backgroundColor: "white",
+	},
+	toggleButtonContainer: {
+		display: "flex",
+		justifyContent: "flex-end",
+		marginBottom: "20px",
+	},
+	toggleButton: {
+		backgroundColor: "#10B981",
+		color: "white",
+		padding: "10px 20px",
+		borderRadius: "6px",
+		border: "none",
+		fontSize: "14px",
+		fontWeight: "500",
+		cursor: "pointer",
+		transition: "all 0.2s ease",
+		width: "auto",
+		minWidth: "200px",
+	},
+	toggleButtonActive: {
+		backgroundColor: "#EF4444",
 	},
 };
 
@@ -171,7 +220,6 @@ const Dashboard = () => {
 		}
 	};
 
-	// Alternar estado de asistencia
 	const toggleAttendance = async () => {
 		try {
 			const response = await fetch(`${API_URL}/api/attendance/state`, {
@@ -185,14 +233,12 @@ const Dashboard = () => {
 			}
 
 			const data = await response.json();
-
 			setIsAttendanceActive(data.active);
 		} catch (err) {
 			console.error("Error al actualizar asistencia:", err);
 		}
 	};
 
-	// Obtener el estado inicial de la asistencia al montar el componente
 	useEffect(() => {
 		const fetchAttendanceState = async () => {
 			try {
@@ -217,40 +263,68 @@ const Dashboard = () => {
 				<h1 style={styles.headerTitle}>Panel de Administración</h1>
 			</header>
 
-			<button onClick={toggleAttendance}>
-				{isAttendanceActive
-					? "Desactivar Asistencia"
-					: "Activar Asistencia"}
-			</button>
+			<div style={styles.toggleButtonContainer}>
+				<button
+					onClick={toggleAttendance}
+					style={{
+						...styles.toggleButton,
+						...(isAttendanceActive
+							? styles.toggleButtonActive
+							: {}),
+					}}
+				>
+					{isAttendanceActive
+						? "Desactivar Asistencia"
+						: "Activar Asistencia"}
+				</button>
+			</div>
 
 			<div style={styles.filterCard}>
 				<h2 style={styles.filterTitle}>Filtrar Asistencias</h2>
 
 				<div style={styles.formGroup}>
-					<div>
-						<label style={styles.label} htmlFor="classNumber">
-							Número de Clase
-						</label>
-						<input
-							id="classNumber"
-							type="number"
-							value={classNumber || ""}
-							onChange={(e) =>
-								setClassNumber(Number(e.target.value))
-							}
-							placeholder="Ej: 1"
+					<div style={styles.inputRow}>
+						<div style={styles.inputWrapper}>
+							<label style={styles.label} htmlFor="classNumber">
+								Número de Clase
+							</label>
+							<input
+								id="classNumber"
+								type="number"
+								value={classNumber || ""}
+								onChange={(e) =>
+									setClassNumber(Number(e.target.value))
+								}
+								placeholder="Ej: 1"
+								style={{
+									...styles.input,
+									...(focusedInput === "classNumber"
+										? styles.inputFocus
+										: {}),
+								}}
+								onFocus={() => setFocusedInput("classNumber")}
+								onBlur={() => setFocusedInput(null)}
+							/>
+						</div>
+
+						<button
+							onClick={fetchAttendance}
+							disabled={loading}
 							style={{
-								...styles.input,
-								...(focusedInput === "classNumber"
-									? styles.inputFocus
+								...styles.button,
+								...(isHovered && !loading
+									? styles.buttonHover
 									: {}),
+								opacity: loading ? 0.7 : 1,
 							}}
-							onFocus={() => setFocusedInput("classNumber")}
-							onBlur={() => setFocusedInput(null)}
-						/>
+							onMouseEnter={() => setIsHovered(true)}
+							onMouseLeave={() => setIsHovered(false)}
+						>
+							{loading ? "Cargando..." : "Filtrar"}
+						</button>
 					</div>
 
-					<div>
+					<div style={styles.inputWrapper}>
 						<label style={styles.label} htmlFor="section">
 							Sección
 						</label>
@@ -270,36 +344,13 @@ const Dashboard = () => {
 							onBlur={() => setFocusedInput(null)}
 						/>
 					</div>
-
-					<div style={{ display: "flex", alignItems: "flex-end" }}>
-						<button
-							onClick={fetchAttendance}
-							disabled={loading}
-							style={{
-								...styles.button,
-								...(isHovered && !loading
-									? styles.buttonHover
-									: {}),
-								opacity: loading ? 0.7 : 1,
-							}}
-							onMouseEnter={() => setIsHovered(true)}
-							onMouseLeave={() => setIsHovered(false)}
-						>
-							{loading ? "Cargando..." : "Filtrar"}
-						</button>
-					</div>
 				</div>
 
 				{error && <div style={styles.errorMessage}>{error}</div>}
 			</div>
 
-			<div style={styles.table}>
-				<table
-					style={{
-						width: "100%",
-						borderCollapse: "collapse" as const,
-					}}
-				>
+			<div style={styles.tableContainer}>
+				<table style={styles.table}>
 					<thead>
 						<tr>
 							<th style={styles.tableHeader}>Nombre</th>

@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../contexts/UserContext";
@@ -24,16 +26,16 @@ const styles = {
 		borderRadius: "12px",
 		boxShadow:
 			"0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
-		padding: "32px",
+		padding: "24px",
 		textAlign: "center" as const,
 		border: "1px solid #e5e7eb",
 		marginBottom: "20px",
 	},
 	title: {
-		fontSize: "28px",
+		fontSize: "24px",
 		fontWeight: "700",
 		color: "#4c1d95",
-		marginBottom: "24px",
+		marginBottom: "20px",
 		fontFamily:
 			'-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
 	},
@@ -42,7 +44,7 @@ const styles = {
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
-		padding: "12px 24px",
+		padding: "12px 16px",
 		backgroundColor: "#6d28d9",
 		color: "white",
 		border: "none",
@@ -87,8 +89,9 @@ const styles = {
 	},
 	footer: {
 		color: "#6b7280",
-		fontSize: "14px",
+		fontSize: "12px",
 		marginTop: "24px",
+		textAlign: "center" as const,
 	},
 	loadingSpinner: {
 		animation: "spin 1s linear infinite",
@@ -165,7 +168,7 @@ const Home = () => {
 	return (
 		<div style={styles.container}>
 			<div style={styles.card}>
-				<h1 style={styles.title}>Asistencia Cloud Computing 2025-1</h1>
+				<h1 style={styles.title}>Cloud Computing 2025-1</h1>
 
 				{locationError && (
 					<div style={styles.errorMessage}>
@@ -244,6 +247,12 @@ const Home = () => {
           @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          @media (max-width: 480px) {
+            ${styles.card.maxWidth} = "100%";
+            ${styles.title.fontSize} = "20px";
+            ${styles.googleButton.padding} = "10px 14px";
+            ${styles.googleButton.fontSize} = "14px";
           }
         `}
 			</style>
