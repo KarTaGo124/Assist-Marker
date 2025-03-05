@@ -2,10 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const AWS = require('aws-sdk');
 const cors = require('cors');
 const fetch = require('node-fetch');
+const fs = require('fs');
+const https = require('https');
 
 AWS.config.update({
   accessKeyId: process.env.aws_access_key_id,
@@ -16,6 +17,11 @@ AWS.config.update({
 
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const app = express();
+
+const options = {
+  key: fs.readFileSync('./ssl/server.key'),
+  cert: fs.readFileSync('./ssl/server.cert')
+};
 
 const corsOptions = {
   origin: [process.env.FRONTEND_URL],
@@ -239,7 +245,6 @@ app.get('/api/attendance/filter', async (req, res) => {
   }
 });
 
-
-app.listen(PORT, () => console.log(`Servidor corriendo en http://52.202.218.202:${PORT}`));
-
-
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Servidor HTTPS corriendo en https://52.202.218.202:${PORT}`);
+});
