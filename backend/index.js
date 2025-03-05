@@ -122,16 +122,11 @@ app.post('/api/attendance/state', async (req, res) => {
   }
 });
 
-
-// 📌 Ubicación del auditorio (ajusta según sea necesario)
-//const AUDITORIUM_LAT = -12.135483926049508;
-//const AUDITORIUM_LNG = -77.02247348966193;
-
 // mis coordenadas
-const AUDITORIUM_LAT = -12.168374939857777;
-const AUDITORIUM_LNG = -76.9650709332535;
+const AUDITORIUM_LAT = process.env.AUDITORIUM_LAT;
+const AUDITORIUM_LNG = process.env.AUDITORIUM_LNG;
 
-const RADIUS_METERS = 10; // Distancia máxima permitida
+const RADIUS_METERS = process.env.RADIUS_METERS;
 
 // Función para calcular distancia con la fórmula de Haversine
 function getDistance(lat1, lon1, lat2, lon2) {
