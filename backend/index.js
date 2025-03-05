@@ -23,7 +23,7 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.use(express.json());
 
@@ -128,8 +128,8 @@ app.post('/api/attendance/state', async (req, res) => {
 //const AUDITORIUM_LNG = -77.02247348966193;
 
 // mis coordenadas
-const AUDITORIUM_LAT = -12.0619008;
-const AUDITORIUM_LNG = -76.9851392;
+const AUDITORIUM_LAT = -12.168374939857777;
+const AUDITORIUM_LNG = -76.9650709332535;
 
 const RADIUS_METERS = 10; // Distancia máxima permitida
 
@@ -245,6 +245,6 @@ app.get('/api/attendance/filter', async (req, res) => {
 });
 
 
-app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Servidor corriendo en http://52.202.218.202:${PORT}`));
 
 

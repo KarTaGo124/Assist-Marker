@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { AttendanceRecord } from "../interfaces/interfaces";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://52.202.218.202:3000";
 
 const styles = {
 	container: {

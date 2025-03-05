@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "../contexts/UserContext";
 import { useLocation } from "../contexts/LocationContext";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://52.202.218.202:3000";
 
 const styles = {
 	container: {

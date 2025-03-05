@@ -7,7 +7,7 @@ import { useLocation } from "../contexts/LocationContext";
 import alertify from "alertifyjs";
 import "alertifyjs/build/css/alertify.min.css";
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://52.202.218.202:3000";
 
 const styles = {
 	container: {
