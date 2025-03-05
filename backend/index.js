@@ -245,6 +245,11 @@ app.get('/api/attendance/filter', async (req, res) => {
   }
 });
 
+// Endpoint de salud para el target group
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 https.createServer(options, app).listen(PORT, () => {
   console.log(`Servidor HTTPS corriendo en https://52.202.218.202:${PORT}`);
 });
