@@ -167,6 +167,8 @@ app.post('/api/attendance', async (req, res) => {
   
   // 📌 Verificar si el usuario está dentro del rango permitido
   const distance = getDistance(latitude, longitude, AUDITORIUM_LAT, AUDITORIUM_LNG);
+  console.log(latitude,longitude);
+  console.log(distance);
 
   if (distance > RADIUS_METERS) {
     return res.status(403).json({ error: "Acércate más al auditorio para registrar tu asistencia" });
