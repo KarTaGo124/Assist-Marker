@@ -238,6 +238,11 @@ app.get('/api/attendance/filter', async (req, res) => {
   }
 });
 
+// Endpoint de salud
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.listen(PORT, () => {
   console.log(`Servidor HTTP corriendo en http://52.202.218.202:${PORT}`);
 });
