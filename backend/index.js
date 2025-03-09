@@ -5,8 +5,6 @@ const passport = require('passport');
 const AWS = require('aws-sdk');
 const cors = require('cors');
 const fetch = require('node-fetch');
-const fs = require('fs');
-const https = require('https');
 
 AWS.config.update({
   accessKeyId: process.env.aws_access_key_id,
@@ -18,13 +16,8 @@ AWS.config.update({
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const app = express();
 
-const options = {
-  key: fs.readFileSync('./ssl/server.key'),
-  cert: fs.readFileSync('./ssl/server.cert')
-};
-
 const corsOptions = {
-  origin: [process.env.FRONTEND_URL, process.env.PROXY_URL],
+  origin: [process.env.FRONTEND_URL],
   credentials: true
 };
 app.use(cors(corsOptions));
@@ -244,16 +237,6 @@ app.get('/api/attendance/filter', async (req, res) => {
       res.status(500).json({ error: "Error interno del servidor" });
   }
 });
-
-// Endpoint de salud para el target group
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-/*
-https.createServer(options, app).listen(PORT, () => {
-  console.log(`Servidor HTTPS corriendo en https://52.202.218.202:${PORT}`);
-});
-*/
 
 app.listen(PORT, () => {
   console.log(`Servidor HTTP corriendo en http://52.202.218.202:${PORT}`);
