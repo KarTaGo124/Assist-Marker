@@ -1,9 +1,25 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import type { AttendanceRecord } from "../interfaces/interfaces";
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const useMediaQuery = (query: string) => {
+	const [matches, setMatches] = useState(false);
+
+	useEffect(() => {
+		const media = window.matchMedia(query);
+		if (media.matches !== matches) {
+			setMatches(media.matches);
+		}
+		const listener = () => {
+			setMatches(media.matches);
+		};
+		media.addEventListener("change", listener);
+		return () => media.removeEventListener("change", listener);
+	}, [matches, query]);
+
+	return matches;
+};
 
 const styles = {
 	container: {
@@ -56,12 +72,20 @@ const styles = {
 	},
 	inputRow: {
 		display: "flex",
-		justifyContent: "space-between", // Espacio entre elementos
-		alignItems: "flex-end",
-		width: "100%", // Asegurar ancho completo
+		flexDirection: "column" as const,
+		gap: "16px",
+		width: "100%",
+		"@media (min-width: 640px)": {
+			flexDirection: "row" as const,
+			justifyContent: "space-between",
+			alignItems: "flex-end",
+		},
 	},
 	inputWrapper: {
-		width: "300px", // Ancho fijo en lugar de maxWidth
+		width: "100%",
+		"@media (min-width: 640px)": {
+			width: "300px",
+		},
 	},
 	label: {
 		display: "block",
@@ -103,8 +127,13 @@ const styles = {
 	},
 	buttonContainer: {
 		display: "flex",
-		justifyContent: "flex-end",
+		justifyContent: "center",
 		width: "100%",
+		marginTop: "16px",
+		"@media (min-width: 640px)": {
+			justifyContent: "flex-end",
+			marginTop: "0",
+		},
 	},
 	tableContainer: {
 		backgroundColor: "white",
@@ -112,9 +141,11 @@ const styles = {
 		overflow: "hidden",
 		boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
 		border: "1px solid #6d28d9",
+		overflowX: "auto" as const,
 	},
 	table: {
 		width: "100%",
+		minWidth: "650px",
 		borderCollapse: "collapse" as const,
 		backgroundColor: "white",
 	},
@@ -157,8 +188,11 @@ const styles = {
 	},
 	toggleButtonContainer: {
 		display: "flex",
-		justifyContent: "flex-end",
+		justifyContent: "center",
 		marginBottom: "20px",
+		"@media (min-width: 640px)": {
+			justifyContent: "flex-end",
+		},
 	},
 	toggleButton: {
 		backgroundColor: "#10B981",
@@ -170,8 +204,12 @@ const styles = {
 		fontWeight: "500",
 		cursor: "pointer",
 		transition: "all 0.2s ease",
-		width: "auto",
-		minWidth: "200px",
+		width: "100%",
+		maxWidth: "300px",
+		"@media (min-width: 640px)": {
+			width: "auto",
+			minWidth: "200px",
+		},
 	},
 	toggleButtonActive: {
 		backgroundColor: "#EF4444",
@@ -179,6 +217,7 @@ const styles = {
 };
 
 const Dashboard = () => {
+	const isDesktop = useMediaQuery("(min-width: 640px)");
 	const [classNumber, setClassNumber] = useState<number>(0);
 	const [section, setSection] = useState<number>(0);
 	const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>(
@@ -263,7 +302,12 @@ const Dashboard = () => {
 				<h1 style={styles.headerTitle}>Panel de Administración</h1>
 			</header>
 
-			<div style={styles.toggleButtonContainer}>
+			<div
+				style={{
+					...styles.toggleButtonContainer,
+					justifyContent: isDesktop ? "flex-end" : "center",
+				}}
+			>
 				<button
 					onClick={toggleAttendance}
 					style={{
@@ -271,6 +315,8 @@ const Dashboard = () => {
 						...(isAttendanceActive
 							? styles.toggleButtonActive
 							: {}),
+						width: isDesktop ? "auto" : "100%",
+						maxWidth: isDesktop ? "none" : "300px",
 					}}
 				>
 					{isAttendanceActive
@@ -283,8 +329,19 @@ const Dashboard = () => {
 				<h2 style={styles.filterTitle}>Filtrar Asistencias</h2>
 
 				<div style={styles.formGroup}>
-					<div style={styles.inputRow}>
-						<div style={styles.inputWrapper}>
+					<div
+						style={{
+							...styles.inputRow,
+							flexDirection: isDesktop ? "row" : "column",
+							alignItems: isDesktop ? "flex-end" : "stretch",
+						}}
+					>
+						<div
+							style={{
+								...styles.inputWrapper,
+								width: isDesktop ? "300px" : "100%",
+							}}
+						>
 							<label style={styles.label} htmlFor="classNumber">
 								Número de Clase
 							</label>
@@ -307,24 +364,38 @@ const Dashboard = () => {
 							/>
 						</div>
 
-						<button
-							onClick={fetchAttendance}
-							disabled={loading}
+						<div
 							style={{
-								...styles.button,
-								...(isHovered && !loading
-									? styles.buttonHover
-									: {}),
-								opacity: loading ? 0.7 : 1,
+								...styles.buttonContainer,
+								justifyContent: isDesktop
+									? "flex-end"
+									: "center",
 							}}
-							onMouseEnter={() => setIsHovered(true)}
-							onMouseLeave={() => setIsHovered(false)}
 						>
-							{loading ? "Cargando..." : "Filtrar"}
-						</button>
+							<button
+								onClick={fetchAttendance}
+								disabled={loading}
+								style={{
+									...styles.button,
+									...(isHovered && !loading
+										? styles.buttonHover
+										: {}),
+									opacity: loading ? 0.7 : 1,
+								}}
+								onMouseEnter={() => setIsHovered(true)}
+								onMouseLeave={() => setIsHovered(false)}
+							>
+								{loading ? "Cargando..." : "Filtrar"}
+							</button>
+						</div>
 					</div>
 
-					<div style={styles.inputWrapper}>
+					<div
+						style={{
+							...styles.inputWrapper,
+							width: isDesktop ? "300px" : "100%",
+						}}
+					>
 						<label style={styles.label} htmlFor="section">
 							Sección
 						</label>
