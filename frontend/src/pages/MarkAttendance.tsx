@@ -113,10 +113,10 @@ const MarkAttendance = () => {
 
 	useEffect(() => {
 		if (!user || !location) {
-			setError("Falta información del usuario o la ubicación.");
-			setLoading(false);
 			return;
 		}
+
+		setLoading(true);
 
 		const attendanceData = {
 			email: user.email,
